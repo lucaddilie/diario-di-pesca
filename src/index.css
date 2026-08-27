@@ -1,0 +1,23 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --color-bg: #f5f8f9;
+  --color-primary: #0d4759;
+  --color-primary-contrast: #ffffff;
+  --color-pending: #b8860b;
+  --color-synced: #1e7d3c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: #1a1a1a;
+}
+
+#root {
+  min-height: 100dvh;
+}
