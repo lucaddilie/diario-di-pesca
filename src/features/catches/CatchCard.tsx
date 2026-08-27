@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import type { FeedItem } from './useFeed'
 
 const dateFormatter = new Intl.DateTimeFormat('it-IT', {
@@ -9,7 +9,28 @@ const dateFormatter = new Intl.DateTimeFormat('it-IT', {
   minute: '2-digit',
 })
 
-export function CatchCard({ item }: { item: FeedItem }) {
+export function CatchCard({
+  item,
+  isOwn,
+  onDelete,
+}: {
+  item: FeedItem
+  isOwn: boolean
+  onDelete: () => void
+}) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleConfirmDelete() {
+    setDeleting(true)
+    try {
+      await onDelete()
+    } finally {
+      setDeleting(false)
+      setConfirmingDelete(false)
+    }
+  }
+
   return (
     <article style={cardStyle}>
       <img src={item.photoUrl} alt={item.species} style={imageStyle} />
@@ -25,6 +46,23 @@ export function CatchCard({ item }: { item: FeedItem }) {
           <p style={metaStyle}>
             📍 {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
           </p>
+        )}
+
+        {isOwn && !confirmingDelete && (
+          <button onClick={() => setConfirmingDelete(true)} style={deleteLinkStyle}>
+            Elimina
+          </button>
+        )}
+        {isOwn && confirmingDelete && (
+          <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.4rem', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.8rem', color: '#666' }}>Eliminare questa cattura?</span>
+            <button onClick={handleConfirmDelete} disabled={deleting} style={confirmDeleteStyle}>
+              {deleting ? 'Elimino…' : 'Sì, elimina'}
+            </button>
+            <button onClick={() => setConfirmingDelete(false)} disabled={deleting} style={cancelDeleteStyle}>
+              Annulla
+            </button>
+          </div>
         )}
       </div>
     </article>
@@ -69,4 +107,35 @@ const metaStyle: CSSProperties = {
   margin: '0.25rem 0 0',
   fontSize: '0.8rem',
   color: '#666',
+}
+
+const deleteLinkStyle: CSSProperties = {
+  marginTop: '0.5rem',
+  padding: 0,
+  background: 'none',
+  border: 'none',
+  color: '#b00020',
+  fontSize: '0.8rem',
+  textDecoration: 'underline',
+  cursor: 'pointer',
+}
+
+const confirmDeleteStyle: CSSProperties = {
+  padding: '0.3rem 0.7rem',
+  fontSize: '0.8rem',
+  color: 'white',
+  background: '#b00020',
+  border: 'none',
+  borderRadius: '6px',
+  cursor: 'pointer',
+}
+
+const cancelDeleteStyle: CSSProperties = {
+  padding: '0.3rem 0.7rem',
+  fontSize: '0.8rem',
+  color: '#333',
+  background: 'transparent',
+  border: '1px solid #ccc',
+  borderRadius: '6px',
+  cursor: 'pointer',
 }

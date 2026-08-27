@@ -4,7 +4,7 @@ import { useProfile } from './features/auth/useProfile'
 import { useSession } from './features/auth/useSession'
 import { CatchFeed } from './features/catches/CatchFeed'
 import { NewCatchForm } from './features/catches/NewCatchForm'
-import { useFeed } from './features/catches/useFeed'
+import { deleteCatch, useFeed, type FeedItem } from './features/catches/useFeed'
 import { useSync } from './features/catches/useSync'
 import { db } from './lib/db'
 import { supabase } from './lib/supabase'
@@ -57,6 +57,11 @@ function AuthenticatedHome({ userId }: { userId: string }) {
     runSync()
   }
 
+  async function handleDelete(item: FeedItem) {
+    await deleteCatch(item)
+    handleDataChanged()
+  }
+
   return (
     <div style={{ width: '100%', maxWidth: '420px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
@@ -92,7 +97,13 @@ function AuthenticatedHome({ userId }: { userId: string }) {
         </div>
       )}
 
-      <CatchFeed items={feedItems} loading={feedLoading} onRefresh={refreshFeed} />
+      <CatchFeed
+        items={feedItems}
+        loading={feedLoading}
+        currentUserId={userId}
+        onRefresh={refreshFeed}
+        onDelete={handleDelete}
+      />
     </div>
   )
 }

@@ -5,11 +5,15 @@ import type { FeedItem } from './useFeed'
 export function CatchFeed({
   items,
   loading,
+  currentUserId,
   onRefresh,
+  onDelete,
 }: {
   items: FeedItem[]
   loading: boolean
+  currentUserId: string
   onRefresh: () => void
+  onDelete: (item: FeedItem) => void
 }) {
   return (
     <section style={{ marginTop: '2rem', width: '100%' }}>
@@ -33,7 +37,12 @@ export function CatchFeed({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
         {items.map((item) => (
-          <CatchCard key={item.clientId} item={item} />
+          <CatchCard
+            key={item.clientId}
+            item={item}
+            isOwn={item.userId === currentUserId}
+            onDelete={() => onDelete(item)}
+          />
         ))}
       </div>
     </section>

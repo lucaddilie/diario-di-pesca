@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type CSSProperties, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type FormEvent } from 'react'
 import { db } from '../../lib/db'
 import { compressImage } from '../../lib/imageCompression'
 import { useGeolocation } from '../location/useGeolocation'
@@ -17,7 +17,38 @@ export function NewCatchForm({ userId, onSaved }: { userId: string; onSaved: () 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
+  const [latitudeInput, setLatitudeInput] = useState('')
+  const [longitudeInput, setLongitudeInput] = useState('')
+  const locationTouchedRef = useRef(false)
   const location = useGeolocation()
+
+  useEffect(() => {
+    if (location.status === 'success' && !locationTouchedRef.current) {
+      setLatitudeInput(location.latitude!.toFixed(5))
+      setLongitudeInput(location.longitude!.toFixed(5))
+    }
+  }, [location.status, location.latitude, location.longitude])
+
+  function handleLatitudeChange(value: string) {
+    locationTouchedRef.current = true
+    setLatitudeInput(value)
+  }
+
+  function handleLongitudeChange(value: string) {
+    locationTouchedRef.current = true
+    setLongitudeInput(value)
+  }
+
+  function resetLocationFieldsToDetected() {
+    locationTouchedRef.current = false
+    if (location.status === 'success') {
+      setLatitudeInput(location.latitude!.toFixed(5))
+      setLongitudeInput(location.longitude!.toFixed(5))
+    } else {
+      setLatitudeInput('')
+      setLongitudeInput('')
+    }
+  }
 
   function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null
@@ -42,6 +73,18 @@ export function NewCatchForm({ userId, onSaved }: { userId: string; onSaved: () 
       return
     }
 
+    const latitude = latitudeInput.trim() === '' ? null : Number(latitudeInput)
+    const longitude = longitudeInput.trim() === '' ? null : Number(longitudeInput)
+
+    if (latitude !== null && (Number.isNaN(latitude) || latitude < -90 || latitude > 90)) {
+      setError('Latitudine non valida (deve essere tra -90 e 90).')
+      return
+    }
+    if (longitude !== null && (Number.isNaN(longitude) || longitude < -180 || longitude > 180)) {
+      setError('Longitudine non valida (deve essere tra -180 e 180).')
+      return
+    }
+
     setSaving(true)
     try {
       const photoBlob = await compressImage(photoFile)
@@ -51,8 +94,8 @@ export function NewCatchForm({ userId, onSaved }: { userId: string; onSaved: () 
         userId,
         species: species.trim(),
         caughtAt: new Date(caughtAt).toISOString(),
-        latitude: location.status === 'success' ? location.latitude : null,
-        longitude: location.status === 'success' ? location.longitude : null,
+        latitude,
+        longitude,
         photoBlob,
         syncStatus: 'pending',
         createdAt: new Date().toISOString(),
@@ -66,6 +109,7 @@ export function NewCatchForm({ userId, onSaved }: { userId: string; onSaved: () 
         return null
       })
       setCaughtAt(nowForDatetimeLocal())
+      resetLocationFieldsToDetected()
       onSaved()
     } catch {
       setError('Impossibile salvare la cattura sul dispositivo. Riprova.')
@@ -111,12 +155,40 @@ export function NewCatchForm({ userId, onSaved }: { userId: string; onSaved: () 
         />
       </label>
 
+      <div style={labelStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <span>Posizione (opzionale, modificabile)</span>
+          {location.status === 'success' && (
+            <button type="button" onClick={resetLocationFieldsToDetected} style={linkButtonStyle}>
+              usa posizione rilevata
+            </button>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <input
+            type="number"
+            inputMode="decimal"
+            step="any"
+            placeholder="Latitudine"
+            value={latitudeInput}
+            onChange={(event) => handleLatitudeChange(event.target.value)}
+            style={{ ...inputStyle, flex: 1 }}
+          />
+          <input
+            type="number"
+            inputMode="decimal"
+            step="any"
+            placeholder="Longitudine"
+            value={longitudeInput}
+            onChange={(event) => handleLongitudeChange(event.target.value)}
+            style={{ ...inputStyle, flex: 1 }}
+          />
+        </div>
+      </div>
+
       <p style={statusTextStyle}>
         {location.status === 'loading' && 'Rilevamento posizione GPS…'}
-        {location.status === 'success' &&
-          `Posizione rilevata (${location.latitude!.toFixed(4)}, ${location.longitude!.toFixed(4)})`}
-        {location.status === 'error' &&
-          'Posizione non disponibile: la cattura verrà salvata senza coordinate.'}
+        {location.status === 'error' && 'GPS non disponibile: inserisci le coordinate a mano se vuoi.'}
         {location.status === 'unsupported' && 'GPS non supportato su questo dispositivo.'}
       </p>
 
@@ -134,6 +206,16 @@ export function NewCatchForm({ userId, onSaved }: { userId: string; onSaved: () 
       </button>
     </form>
   )
+}
+
+const linkButtonStyle: CSSProperties = {
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  color: 'var(--color-primary)',
+  fontSize: '0.8rem',
+  textDecoration: 'underline',
+  cursor: 'pointer',
 }
 
 const formStyle: CSSProperties = {
